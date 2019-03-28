@@ -238,50 +238,11 @@ def is_fd_alive(fd):
 
 
 def cli(opts, args):
-    template_path, data = args
-    format = opts.format
-    if data in ("-", ""):
-        if data == "-" or (data == "" and is_fd_alive(sys.stdin)):
-            data = sys.stdin.read()
-        if format == "auto":
-            # default to yaml first if available since yaml
-            # is a superset of json
-            if has_format("yaml"):
-                format = "yaml"
-            else:
-                format = "json"
-    else:
-        path = os.path.join(os.getcwd(), os.path.expanduser(data))
-        if format == "auto":
-            ext = os.path.splitext(path)[1][1:]
-            if has_format(ext):
-                format = ext
-            else:
-                raise InvalidDataFormat(ext)
-
-        with open(path) as fp:
-            data = fp.read()
-
-    template_path = os.path.abspath(template_path)
-
-    if data:
-        try:
-            fn, except_exc, raise_exc = get_format(format)
-        except InvalidDataFormat:
-            if format in ("yml", "yaml"):
-                raise InvalidDataFormat("%s: install pyyaml to fix" % format)
-            if format == "toml":
-                raise InvalidDataFormat("toml: install toml to fix")
-            if format == "xml":
-                raise InvalidDataFormat("xml: install xmltodict to fix")
-            raise
-        try:
-            data = fn(data) or {}
-        except except_exc:
-            raise raise_exc(u"%s ..." % data[:60])
-    else:
-        data = {}
-
+    data = parse_data(args[1], opts.format)
+    if len(args) > 2:
+        for dt in args[2:]:
+            data.update(parse_data(dt, opts.format))
+    template_path = os.path.abspath(args[0])
     extensions = []
     for ext in opts.extensions:
         # Allow shorthand and assume if it's not a module
@@ -314,6 +275,49 @@ def cli(opts, args):
     out.write(render(template_path, data, extensions, opts.strict, includes=opts.includes))
     out.flush()
     return 0
+
+
+def parse_data(data, format):
+    if data in ("-", ""):
+        if data == "-" or (data == "" and is_fd_alive(sys.stdin)):
+            data = sys.stdin.read()
+        if format == "auto":
+            # default to yaml first if available since yaml
+            # is a superset of json
+            if has_format("yaml"):
+                format = "yaml"
+            else:
+                format = "json"
+    else:
+        path = os.path.join(os.getcwd(), os.path.expanduser(data))
+        if format == "auto":
+            ext = os.path.splitext(path)[1][1:]
+            if has_format(ext):
+                format = ext
+            else:
+                raise InvalidDataFormat(ext)
+
+        with open(path) as fp:
+            data = fp.read()
+
+    if data:
+        try:
+            fn, except_exc, raise_exc = get_format(format)
+        except InvalidDataFormat:
+            if format in ("yml", "yaml"):
+                raise InvalidDataFormat("%s: install pyyaml to fix" % format)
+            if format == "toml":
+                raise InvalidDataFormat("toml: install toml to fix")
+            if format == "xml":
+                raise InvalidDataFormat("xml: install xmltodict to fix")
+            raise
+        try:
+            data = fn(data) or {}
+        except except_exc:
+            raise raise_exc(u"%s ..." % data[:60])
+    else:
+        data = {}
+    return data
 
 
 def parse_kv_string(pairs):
@@ -360,7 +364,7 @@ class LazyOptionParser(OptionParser):
 
 def main():
     parser = LazyOptionParser(
-        usage="usage: %prog [options] <input template> <input data>"
+        usage="usage: %prog [options] <input template> [<input data> ..]"
     )
     parser.add_option(
         "--format",

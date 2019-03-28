@@ -12,7 +12,7 @@ $ curl -s http://httpbin.org/ip | jinja2 helloip.tmpl > helloip.html
 
 ## Usage
 ```
-Usage: jinja2 [options] <input template> <input data>
+Usage: jinja2 [options] <input template> [<input data> ..]
 
 Options:
   --version             show program's version number and exit
@@ -47,6 +47,20 @@ If `toml` is present, you can use TOML as an input data source.
 If `xmltodict` is present, you can use XML as an input data source.
 
 `$ pip install jinja2-cli[xml]`
+
+## Input data and overrides
+
+Precedence of input sources and template variables
+- Template variables defined with `-D`
+- Rightmost input data
+- ...  
+- Leftmost input data
+
+Input sources are merged left to right, meaning the dictionary is built by merging the data sources left to right using `dict.update()`.
+This means that the input sources to the right take precedence, overriding values previous input sources, if there are parts of the dictionaries that overlap.
+
+If no input data is given, standard input is read for input data.
+If an <input data> is a single `-`, standard input is read as an input data.
 
 ## TODO
  * Variable inheritance and overrides
