@@ -212,6 +212,17 @@ formats = {
 }
 
 
+def get_hash(data, hashtype='sha1', enc='utf-8'):
+    import hashlib
+    try: # see if hash is supported
+        h = hashlib.new(hashtype)
+    except:
+        return None
+
+    h.update(bytearray(data, enc))
+    return h.hexdigest()
+
+
 def render(template_path, data, extensions, strict=False, includes=[]):
     from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
@@ -223,7 +234,11 @@ def render(template_path, data, extensions, strict=False, includes=[]):
     if strict:
         env.undefined = StrictUndefined
 
-    # Add environ global
+    # FIXME don't install hash filter statically
+    env.filters['hash'] = get_hash
+
+
+# Add environ global
     env.globals["environ"] = lambda key: force_text(os.environ.get(key))
 
     return env.get_template(os.path.basename(template_path)).render(data)
