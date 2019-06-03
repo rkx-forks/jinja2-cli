@@ -222,6 +222,13 @@ def get_hash(data, hashtype='sha1', enc='utf-8'):
     h.update(bytearray(data, enc))
     return h.hexdigest()
 
+def b64dec(data, enc='utf-8'):
+    import base64
+    return base64.b64decode(bytearray(data, enc)).decode(enc)
+
+def b64enc(data, enc='utf-8'):
+    import base64
+    return base64.b64encode(bytearray(data, enc)).decode(enc)
 
 def render(template_path, data, extensions, strict=False, includes=[]):
     from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -236,6 +243,9 @@ def render(template_path, data, extensions, strict=False, includes=[]):
 
     # FIXME don't install hash filter statically
     env.filters['hash'] = get_hash
+    import base64
+    env.filters['b64decode'] = b64dec
+    env.filters['b64encode'] = b64enc
 
 
 # Add environ global
